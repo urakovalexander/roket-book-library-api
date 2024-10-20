@@ -6,7 +6,8 @@ use PDO;
 use PDOException;
 use Dotenv\Dotenv;
 
-class Database {
+class Database
+{
     private static $instance = null;
     private $conn;
     private $host;
@@ -14,7 +15,8 @@ class Database {
     private $username;
     private $password;
 
-    private function __construct() {
+    private function __construct()
+    {
         $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
         $dotenv->load();
 
