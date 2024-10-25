@@ -5,27 +5,61 @@ require '../vendor/autoload.php';
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
-use Alexanderurakov\RoketBookLibraryApi\Controllers\UserController;
+use Alexanderurakov\RoketBookLibraryApi\Controllers\{
+    TokenController, UserController
+};
 
-$requestMethod = $_SERVER["REQUEST_METHOD"];
-$requestUri = $_SERVER["REQUEST_URI"];
+// Централизованная маршрутизация
+$routes = [
+    'GET' => [
+        '/users' => [UserController::class, 'getAllUsers'],
+        '/tokens/{id}' => [TokenController::class, 'tokenExists'],
+    ],
+    'POST' => [
+        '/users/register' => [UserController::class, 'register'],
+        '/users/login' => [UserController::class, 'login'],
+        '/tokens' => [TokenController::class, 'saveToken'],
+    ],
+    'DELETE' => [
+        '/tokens/{id}' => [TokenController::class, 'deleteToken']
+    ]
+];
 
-$userController = new UserController();
+// Получаем метод запроса и URI
+$requestMethod = $_SERVER['REQUEST_METHOD'];
+$requestUri = $_SERVER['REQUEST_URI'];
 
-
-// Создание нового пользователя
-if ($requestMethod === 'POST' && $requestUri === '/users/register') {
-    $data = json_decode(file_get_contents("php://input"), true);
-    echo json_encode($userController->register($data));
+// Функция для разбора маршрутов и их соответствия
+function matchRoute($method, $uri, $routes)
+{
+    foreach ($routes[$method] as $route => $controllerAction) {
+        // Подставляем параметры в маршрут
+        $pattern = preg_replace('/\{[a-z_]+\}/', '(\d+)', $route);
+        if (preg_match('#^' . $pattern . '$#', $uri, $matches)) {
+            array_shift($matches); // Убираем полное совпадение
+            return [$controllerAction, $matches]; // Возвращаем контроллер и параметры
+        }
+    }
+    return null;
 }
 
-// Аутентификация пользователя
-if ($requestMethod === 'POST' && $requestUri === '/users/login') {
-    $data = json_decode(file_get_contents("php://input"), true);
-    echo json_encode($userController->login($data));
-}
+// Обрабатываем маршруты
+$route = matchRoute($requestMethod, $requestUri, $routes);
 
-// Получение списка участников
-if ($requestMethod === 'GET' && $requestUri === '/users') {
-    echo json_encode($userController->getAllUsers());
+if ($route) {
+    [$controllerAction, $params] = $route;
+    [$controllerClass, $action] = $controllerAction;
+    $controller = new $controllerClass();
+
+    // Получаем данные из запроса, если есть
+    $data = json_decode(file_get_contents("php://input"), true) ?? [];
+
+    // Передаем параметры и данные как отдельные аргументы
+    $response = $controller->$action(...array_merge($params, [$data]));
+
+    // Отправляем JSON-ответ
+    echo json_encode($response);
+} else {
+    http_response_code(404);
+    echo json_encode(['status' => 'error', 'message' => 'Route not found']);
 }
