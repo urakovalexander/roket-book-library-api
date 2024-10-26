@@ -6,21 +6,26 @@ header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
 use Alexanderurakov\RoketBookLibraryApi\Controllers\{
-    TokenController, UserController
+    TokenController, UserController, BookController
 };
 
 // Централизованная маршрутизация
 $routes = [
     'GET' => [
+        '/books/user/{id}' => [BookController::class, 'getBooksByUser'],
+        '/books/{id}' => [BookController::class, 'getBookById'],
         '/users' => [UserController::class, 'getAllUsers'],
         '/tokens/{id}' => [TokenController::class, 'tokenExists'],
     ],
     'POST' => [
+        '/books' => [BookController::class, 'create'],
+        '/books/restore' => [BookController::class, 'restore'],
         '/users/register' => [UserController::class, 'register'],
         '/users/login' => [UserController::class, 'login'],
         '/tokens' => [TokenController::class, 'saveToken'],
     ],
     'DELETE' => [
+        '/books/{id}' => [BookController::class, 'delete'],
         '/tokens/{id}' => [TokenController::class, 'deleteToken']
     ]
 ];
